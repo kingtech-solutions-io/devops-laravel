@@ -60,14 +60,22 @@ fi
 # Deployments will be prefixed with the current timestamp
 date_string=$(date +"%Y-%m-%d-%H-%M-%S")
 
-# Deployments are post fixed with the shortened git hash
+# Branch to deploy: DEPLOY_BRANCH env override > app config > main
+branch="${DEPLOY_BRANCH:-${branch:-main}}"
+status "Branch: $branch"
+
+# Deployments are post fixed with the shortened git hash of the target branch
+remote_git_line=$(git ls-remote "$repo" "refs/heads/$branch" | head -n 1)
+if [ -z "$remote_git_line" ]; then
+  error "Branch '$branch' not found in $repo"
+  exit 1
+fi
+remote_hash=${remote_git_line:0:7}
+
 if [ -d $deploy_directory/current ]; then
-  cd $deploy_directory/current/
-  remote_git_line=$(git ls-remote | head -n 1)
-  remote_hash=${remote_git_line:0:7}
-  local_hash=$(git rev-parse --short HEAD 2> /dev/null | sed "s/\(.*\)/\1/")
+  local_hash=$(git -C $deploy_directory/current rev-parse --short HEAD 2> /dev/null)
   status "remote_hash=$remote_hash, local_hash=$local_hash"
-  if [ $remote_hash = $local_hash ]; then
+  if [ "$remote_hash" = "$local_hash" ]; then
     status "No code changes detected...but deploying anyway!"
   fi
 fi
@@ -100,7 +108,7 @@ if [ -f $deploy_directory/build*.zip ]; then
 else
   # Git clone into this new directory
   status "Deploying from a git repository..."
-  git clone --depth 1 $repo $foldername
+  git clone --depth 1 --branch "$branch" "$repo" "$foldername" || { error "git clone failed"; exit 1; }
 fi
 
 cd $deploy_directory/releases/$foldername
