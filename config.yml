@@ -5,14 +5,14 @@ installs:
   php:
     install: yes
     composer: yes
-    version: 8.3
+    version: 8.5
   node_and_npm: yes
   redis: yes
   sqlite: yes
   database:
     mysql: yes
     mariadb: no
-    root_password: secret
+    root_password: $H0wt1m3
   certbot: yes
   apache: no
   memcache: no
